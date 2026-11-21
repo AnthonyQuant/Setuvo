@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Sales &amp; Inventory Analytics — {{ app_name }}{% endblock %}
+
+{% block head_extra %}
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+{% endblock %}
+
+{% block content %}
+<!-- Analytics Header Banner -->
+<section class="page-header">
+  <div class="container page-header-inner">
+    <div>
+      <span class="eyebrow-badge">Pandas &amp; Plotly Operations Intelligence</span>
+      <h1>Sales &amp; Inventory Analytics</h1>
+      <p class="page-lead">
+        Live Naira ({{ currency_symbol }}) revenue metrics, category performance, fulfillment status breakdown,
+        and stock replenishment alerts computed directly from Setuvo&rsquo;s SQLite store database.
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      <a
+        href="{{ url_for('analytics_export_csv', report_type='sales') }}"
+        class="btn btn-outline btn-sm"
+      >
+        Export Sales CSV
+      </a>
+      <a
+        href="{{ url_for('analytics_export_csv', report_type='inventory') }}"
+        class="btn btn-primary btn-sm"
+      >
+        Export Inventory CSV
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Top KPI Summary Cards -->
+<section class="section-block">
+  <div class="container">
+    <div class="kpi-grid">
+      <article class="kpi-card">
+        <span class="kpi-label">Net Sales Revenue (NGN)</span>
+        <strong class="kpi-value">{{ summary['formatted_total_sales'] }}</strong>
+        <small class="kpi-sub">
+          Products: {{ summary['formatted_product_revenue'] }} &bull; Delivery: {{ summary['formatted_delivery_revenue'] }}
+        </small>
+      </article>
+
+      <article class="kpi-card">
+        <span class="kpi-label">Active Orders</span>
+        <strong class="kpi-value">{{ summary['order_count'] }}</strong>
+        <small class="kpi-sub">
+          {{ summary['total_units_sold'] }} total unit{{ 's' if summary['total_units_sold'] != 1 else '' }} sold
+          {% if summary['cancelled_count'] > 0 %}
+            &bull; {{ summary['cancelled_count'] }} cancelled
+          {% endif %}
+        </small>
+      </article>
+
+      <article class="kpi-card">
+        <span class="kpi-label">Average Order Value (AOV)</span>
+        <strong class="kpi-value">{{ summary['formatted_average_order_value'] }}</strong>
+        <small class="kpi-sub">Excludes cancelled orders</small>
+      </article>
+
+      <article class="kpi-card">
+        <span class="kpi-label">Active Inventory Valuation</span>
+        <strong class="kpi-value">{{ summary['formatted_inventory_retail_value'] }}</strong>
+        <small class="kpi-sub">
+          {{ summary['total_stock_units'] }} unit{{ 's' if summary['total_stock_units'] != 1 else '' }} in stock &bull;
+          {{ summary['low_stock_products']|length }} restock alert{{ 's' if summary['low_stock_products']|length != 1 else '' }}
+        </small>
+      </article>
+    </div>
+
+    <!-- Primary Plotly Charts Row: Monthly Revenue & Sales by Category -->
+    <div class="analytics-charts-grid">
+      <div class="chart-card">
+        {{ charts['revenue_over_time'] | safe }}
+      </div>
+
+      <div class="chart-card">
+        {{ charts['sales_by_category'] | safe }}
+      </div>
+    </div>
+
+    <!-- Secondary Plotly Charts Row: Top Products & Order Status Distribution -->
+    <div class="analytics-charts-grid">
+      <div class="chart-card">
+        {{ charts['top_products'] | safe }}
+      </div>
+
+      <div class="chart-card">
+        {{ charts['order_status'] | safe }}
+      </div>
+    </div>
+
+    <!-- Full-Width Plotly Inventory Stock Levels Chart -->
+    <div class="chart-card chart-card-full">
+      {{ charts['inventory_levels'] | safe }}
+    </div>
+
+    <!-- Two-Column Pandas Tabular Breakdowns: Bestsellers & Category Revenue -->
+    <div class="analytics-tables-grid">
+      <!-- Bestselling Products Table -->
+      <div class="spec-panel receipt-panel">
+        <div class="receipt-items-head">
+          <h2>Bestselling Workstation Gear</h2>
+          <small class="muted-note">Ranked by units sold</small>
+        </div>
+
+        {% if summary['bestselling_products'] %}
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Product</th>
+                  <th scope="col">Category</th>
+                  <th scope="col" class="text-center">Units</th>
+                  <th scope="col" class="text-right">Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for prod in summary['bestselling_products'] %}
+                  <tr>
+                    <td>
+                      <strong>{{ prod['product_name'] }}</strong>
+                      <div class="product-sku">{{ prod['sku'] }}</div>
+                    </td>
+                    <td>{{ prod['category_name'] }}</td>
+                    <td class="text-center"><strong>{{ prod['units_sold'] }}</strong></td>
+                    <td class="text-right"><strong>{{ prod['formatted_revenue'] }}</strong></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="muted-note">No completed product sales recorded yet.</p>
+        {% endif %}
+      </div>
+
+      <!-- Revenue by Category Table -->
+      <div class="spec-panel receipt-panel">
+        <div class="receipt-items-head">
+          <h2>Revenue by Hardware Category</h2>
+          <small class="muted-note">Share of net item revenue</small>
+        </div>
+
+        {% if summary['revenue_by_category'] %}
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Category</th>
+                  <th scope="col" class="text-center">Units</th>
+                  <th scope="col" class="text-right">Revenue</th>
+                  <th scope="col" class="text-right">Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for cat in summary['revenue_by_category'] %}
+                  <tr>
+                    <td><strong>{{ cat['category_name'] }}</strong></td>
+                    <td class="text-center">{{ cat['units_sold'] }}</td>
+                    <td class="text-right"><strong>{{ cat['formatted_revenue'] }}</strong></td>
+                    <td class="text-right"><span class="count-pill">{{ cat['share_pct'] }}%</span></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="muted-note">No category revenue recorded yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Low-Stock & Out-of-Stock Replenishment Alerts -->
+    <div class="spec-panel receipt-panel">
+      <div class="receipt-items-head">
+        <div>
+          <h2>Low-Stock &amp; Out-of-Stock Replenishment Alerts</h2>
+          <small class="muted-note">Active SKUs at or below 5 units remaining</small>
+        </div>
+        <a
+          href="{{ url_for('analytics_export_csv', report_type='inventory') }}"
+          class="btn btn-outline btn-sm"
+        >
+          Download Full Stock CSV
+        </a>
+      </div>
+
+      {% if summary['low_stock_products'] %}
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">SKU</th>
+                <th scope="col">Product Name</th>
+                <th scope="col">Category</th>
+                <th scope="col" class="text-right">Unit Price</th>
+                <th scope="col" class="text-center">Remaining</th>
+                <th scope="col" class="text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in summary['low_stock_products'] %}
+                <tr>
+                  <td><span class="product-sku">{{ item['sku'] }}</span></td>
+                  <td>
+                    <a href="{{ url_for('product_detail', product_id=item['id']) }}" class="table-item-link">
+                      {{ item['name'] }}
+                    </a>
+                  </td>
+                  <td>{{ item['category_name'] }}</td>
+                  <td class="text-right">{{ item['formatted_price'] }}</td>
+                  <td class="text-center"><strong>{{ item['stock'] }}</strong></td>
+                  <td class="text-right">
+                    <span class="stock-badge {{ 'out-of-stock' if item['stock'] == 0 else 'low-stock' }}">
+                      {{ item['stock_status'] }}
+                    </span>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted-note">All active catalogue items currently have healthy stock levels (&gt; 5 units).</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

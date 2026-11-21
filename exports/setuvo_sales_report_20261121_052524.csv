@@ -1,0 +1,11 @@
+order_number,order_status,order_created_at,product_sku,product_name,category_name,quantity,unit_price_ngn,line_total_ngn
+STV-20261101-1001,Delivered,2026-11-06T21:12:50Z,STV-KM-001,Keychron K2 V2 75% Wireless Mechanical Keyboard,Keyboards & Mice,1,89000.0,89000.0
+STV-20261101-1001,Delivered,2026-11-06T21:12:50Z,STV-LS-002,UGREEN Unibody Aluminum Ventilated Laptop Stand,Laptop Stands & Cooling,1,38000.0,38000.0
+STV-20261108-1002,Shipped,2026-11-13T21:12:50Z,STV-HA-001,Soundcore Space One Active Noise Cancelling Headphones,Headphones & Audio,1,78000.0,78000.0
+STV-20261108-1002,Shipped,2026-11-13T21:12:50Z,STV-SC-002,UGREEN Revodok 7-in-1 USB-C Hub (4K HDMI + 100W PD),Storage & Connectivity,1,36500.0,36500.0
+STV-20261108-1002,Shipped,2026-11-13T21:12:50Z,STV-SP-001,Baseus Heyo Rotation Countdown Pomodoro Desk Timer,Study & Productivity,1,15000.0,15000.0
+STV-20261115-1003,Processing,2026-11-17T21:12:50Z,STV-SC-001,Samsung T7 Shield 1TB Rugged Portable NVMe SSD,Storage & Connectivity,1,118000.0,118000.0
+STV-20261115-1003,Processing,2026-11-17T21:12:50Z,STV-KM-003,Logitech MX Master 3S Performance Wireless Mouse,Keyboards & Mice,1,96000.0,96000.0
+STV-20261119-1004,Order placed,2026-11-19T21:12:50Z,STV-LS-001,Nexstand K2 Foldable Ergonomic Laptop Riser,Laptop Stands & Cooling,1,24500.0,24500.0
+STV-20261119-1004,Order placed,2026-11-19T21:12:50Z,STV-KM-002,Logitech K380 Multi-Device Slim Bluetooth Keyboard,Keyboards & Mice,1,42000.0,42000.0
+STV-20261119-1004,Order placed,2026-11-19T21:12:50Z,STV-SP-002,Setuvo A5 Hardcover Dot-Grid Engineering Notebook (2-Pack),Study & Productivity,2,14000.0,28000.0

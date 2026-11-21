@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Order Confirmed ({{ order.order_number }}) — {{ app_name }}{% endblock %}
+
+{% block content %}
+<!-- Confirmation Header Banner -->
+<section class="page-header">
+  <div class="container page-header-inner">
+    <div>
+      <span class="eyebrow-badge">Order Confirmed &bull; Stock Reserved</span>
+      <h1>Thank You, {{ order.customer_name }}!</h1>
+      <p class="page-lead">
+        Your order <strong class="mono-ref">{{ order.order_number }}</strong> has been recorded on
+        {{ order.created_at | short_date }}. Keep your order number and email address to track delivery updates anytime.
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      <button type="button" class="btn btn-outline btn-sm" onclick="window.print()">
+        Print Receipt
+      </button>
+      <a
+        href="{{ url_for('download_order_receipt', order_number=order.order_number) }}"
+        class="btn btn-outline btn-sm"
+      >
+        Download Receipt (PNG)
+      </a>
+      <a
+        href="{{ url_for('track_order', order_number=order.order_number, email=order.customer_email) }}"
+        class="btn btn-primary btn-sm"
+      >
+        Track Order Status
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Main Order Receipt Section -->
+<section class="section-block">
+  <div class="container checkout-layout">
+    <!-- Left Column: Receipt Details & Purchased Items -->
+    <div class="receipt-main-col">
+      <!-- Reference & Status Strip -->
+      <div class="receipt-banner-card">
+        <div class="receipt-ref-block">
+          <span class="price-label">Setuvo Order Reference</span>
+          <strong class="receipt-order-number">{{ order.order_number }}</strong>
+        </div>
+
+        <div class="receipt-status-block">
+          <span class="price-label">Current Fulfillment Status</span>
+          <span class="status-badge {{ order.status | status_badge_class }}">{{ order.status }}</span>
+        </div>
+
+        <div class="receipt-date-block">
+          <span class="price-label">Placed On</span>
+          <strong>{{ order.created_at | short_date }}</strong>
+        </div>
+      </div>
+
+      <!-- Customer & Delivery Details Card -->
+      <div class="spec-panel receipt-panel">
+        <h2>Customer &amp; Delivery Details</h2>
+        <table class="spec-table">
+          <tbody>
+            <tr>
+              <th scope="row">Recipient Name</th>
+              <td>{{ order.customer_name }}</td>
+            </tr>
+            <tr>
+              <th scope="row">Email Address</th>
+              <td>{{ order.customer_email }}</td>
+            </tr>
+            <tr>
+              <th scope="row">Contact Phone</th>
+              <td>{{ order.customer_phone }}</td>
+            </tr>
+            <tr>
+              <th scope="row">Nigerian Delivery Zone</th>
+              <td>{{ order.delivery_zone_label }} ({{ order.delivery_eta }})</td>
+            </tr>
+            <tr>
+              <th scope="row">Delivery Address</th>
+              <td>{{ order.delivery_address }}</td>
+            </tr>
+            <tr>
+              <th scope="row">Payment Method</th>
+              <td>{{ order.payment_method }}</td>
+            </tr>
+            {% if order.notes %}
+              <tr>
+                <th scope="row">Dispatch Notes</th>
+                <td>{{ order.notes }}</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Itemized Order Snapshot Table -->
+      <div class="spec-panel receipt-panel">
+        <div class="receipt-items-head">
+          <h2>Purchased Workstation Gear ({{ order.total_units }} Unit{{ 's' if order.total_units != 1 else '' }})</h2>
+          <small class="muted-note">Unit prices locked at checkout</small>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Product</th>
+                <th scope="col">SKU</th>
+                <th scope="col" class="text-center">Qty</th>
+                <th scope="col" class="text-right">Unit Price</th>
+                <th scope="col" class="text-right">Line Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in order.items %}
+                <tr>
+                  <td>
+                    {% if item.product_id %}
+                      <a href="{{ url_for('product_detail', product_id=item.product_id) }}" class="table-item-link">
+                        {{ item.product_name }}
+                      </a>
+                    {% else %}
+                      <strong>{{ item.product_name }}</strong>
+                    {% endif %}
+                  </td>
+                  <td><span class="product-sku">{{ item.product_sku }}</span></td>
+                  <td class="text-center">{{ item.quantity }}</td>
+                  <td class="text-right">{{ item.unit_price | naira }}</td>
+                  <td class="text-right"><strong>{{ item.line_total | naira }}</strong></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Sticky Financial Summary & Next Steps -->
+    <aside class="checkout-summary-sidebar" aria-label="Order Payment Summary">
+      <div class="summary-card">
+        <div class="summary-card-header">
+          <span class="card-kicker">Receipt Summary</span>
+          <h2>Amount Breakdown</h2>
+        </div>
+
+        <dl class="summary-breakdown">
+          <div class="summary-row">
+            <dt>Items Subtotal</dt>
+            <dd>{{ order.subtotal | naira }}</dd>
+          </div>
+          <div class="summary-row">
+            <dt>Delivery ({{ order.delivery_zone_label }})</dt>
+            <dd>
+              {% if order.delivery_fee == 0 %}
+                Free
+              {% else %}
+                {{ order.delivery_fee | naira }}
+              {% endif %}
+            </dd>
+          </div>
+          <div class="summary-row summary-row-total">
+            <dt>Order Total (NGN)</dt>
+            <dd>{{ order.total_amount | naira }}</dd>
+          </div>
+        </dl>
+
+        <div class="cart-checkout-actions">
+          <a
+            href="{{ url_for('download_order_receipt', order_number=order.order_number) }}"
+            class="btn btn-outline btn-block"
+          >
+            Download Receipt (PNG)
+          </a>
+          <a
+            href="{{ url_for('track_order', order_number=order.order_number, email=order.customer_email) }}"
+            class="btn btn-primary btn-lg btn-block"
+          >
+            Track This Order
+          </a>
+          <a href="{{ url_for('catalogue') }}" class="btn btn-outline btn-block">
+            Continue Shopping
+          </a>
+        </div>
+
+        <p class="checkout-reassurance">
+          Need to check progress later? Visit <strong>Track Order</strong> in the top menu and enter
+          <strong>{{ order.order_number }}</strong> with <strong>{{ order.customer_email }}</strong>.
+        </p>
+      </div>
+    </aside>
+  </div>
+</section>
+{% endblock %}

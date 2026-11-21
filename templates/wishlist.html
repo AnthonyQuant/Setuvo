@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Saved Wishlist ({{ saved_products|length }}) — {{ app_name }}{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="page-header">
+  <div class="container page-header-inner">
+    <div>
+      <span class="eyebrow-badge">Session Saved Gear</span>
+      <h1>Your Workstation Wishlist</h1>
+      <p class="page-lead">
+        {% if saved_products %}
+          Keep track of peripherals you are considering, compare their specs, or move in-stock items straight to your cart.
+        {% else %}
+          Save keyboards, stands, headphones, or storage drives while browsing so you can compare and order them later.
+        {% endif %}
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      {% if saved_products|length >= 2 %}
+        {% set compare_slice = saved_products[:3] %}
+        <a
+          href="{{ url_for('compare_products', ids=compare_slice|map(attribute='id')|join(',')) }}"
+          class="btn btn-outline btn-sm"
+        >
+          Compare Saved Items ({{ compare_slice|length }})
+        </a>
+      {% endif %}
+      <a href="{{ url_for('catalogue') }}" class="btn btn-primary btn-sm">
+        Browse Catalogue
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Saved Wishlist Grid -->
+<section class="section-block">
+  <div class="container">
+    {% if saved_products %}
+      <div class="catalogue-toolbar">
+        <div class="result-summary">
+          <strong>{{ saved_products|length }}</strong>
+          <span>saved item{{ 's' if saved_products|length != 1 else '' }} in your wishlist</span>
+        </div>
+
+        <a href="{{ url_for('cart_view') }}" class="text-link">
+          Go to Shopping Cart ({{ cart_count }}) &rarr;
+        </a>
+      </div>
+
+      <div class="product-grid">
+        {% for product in saved_products %}
+          <article class="product-card">
+            <div class="product-card-media">
+              <a href="{{ url_for('product_detail', product_id=product.id) }}">
+                <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy">
+              </a>
+              <span class="stock-badge {{ product.stock_badge_class }}">{{ product.stock_status }}</span>
+              {% if product.is_bestseller %}
+                <span class="tag-badge">Bestseller</span>
+              {% elif product.is_featured %}
+                <span class="tag-badge tag-featured">Featured</span>
+              {% endif %}
+            </div>
+
+            <div class="product-card-body">
+              <div class="product-meta-row">
+                <span class="product-brand">{{ product.brand }}</span>
+                <span class="product-cat">{{ product.category_name }}</span>
+              </div>
+
+              <h3 class="product-title">
+                <a href="{{ url_for('product_detail', product_id=product.id) }}">{{ product.name }}</a>
+              </h3>
+
+              <p class="product-excerpt">{{ product.description }}</p>
+
+              {% if product.specifications %}
+                <ul class="mini-spec-list">
+                  {% for spec_k, spec_v in product.specifications.items() %}
+                    {% if loop.index <= 2 %}
+                      <li><strong>{{ spec_k }}:</strong> {{ spec_v }}</li>
+                    {% endif %}
+                  {% endfor %}
+                </ul>
+              {% endif %}
+
+              <div class="product-price-row">
+                <strong class="product-price">{{ product.formatted_price }}</strong>
+                <small class="product-sku">SKU: {{ product.sku }}</small>
+              </div>
+
+              <div class="product-card-actions">
+                {% if product.is_available %}
+                  <form
+                    action="{{ url_for('wishlist_move_to_cart', product_id=product.id) }}"
+                    method="post"
+                    class="inline-form grow-form"
+                  >
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-primary btn-sm btn-block">
+                      Move to Cart
+                    </button>
+                  </form>
+                {% else %}
+                  <button type="button" class="btn btn-disabled btn-sm grow-form" disabled>
+                    Out of Stock
+                  </button>
+                {% endif %}
+
+                <form
+                  action="{{ url_for('wishlist_remove', product_id=product.id) }}"
+                  method="post"
+                  class="inline-form"
+                >
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="next" value="{{ url_for('wishlist_view') }}">
+                  <button type="submit" class="btn btn-danger-outline btn-sm">
+                    Remove
+                  </button>
+                </form>
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <!-- Empty Wishlist State -->
+      <div class="empty-state">
+        <h3>Your Setuvo wishlist is empty</h3>
+        <p>
+          Click <strong>Save</strong> on any product card in the catalogue or on a product detail page
+          to bookmark workstation hardware here.
+        </p>
+        <div class="empty-state-actions">
+          <a href="{{ url_for('catalogue') }}" class="btn btn-primary">Explore Catalogue</a>
+          <a href="{{ url_for('setup_builder') }}" class="btn btn-secondary">Open Setup Builder</a>
+          <a href="{{ url_for('bundles_page') }}" class="btn btn-outline">View Workstation Kits</a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

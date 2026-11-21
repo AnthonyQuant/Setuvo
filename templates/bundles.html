@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Preconfigured Workstation Kits — {{ app_name }}{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="page-header">
+  <div class="container page-header-inner">
+    <div>
+      <span class="eyebrow-badge">Curated Multi-Item Savings</span>
+      <h1>Preconfigured Workstation Kits</h1>
+      <p class="page-lead">
+        Save up to 15% with complete study, programming, home office, and content creation bundles.
+        Keep all items or uncheck components you already own before adding a kit to your cart.
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <a href="{{ url_for('setup_builder') }}" class="btn btn-primary btn-sm">
+        Build Custom Budget Setup
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Quick Jump Anchor Bar -->
+{% if bundles %}
+<section class="purpose-tabs-bar">
+  <div class="container purpose-tabs-inner">
+    {% for bundle in bundles %}
+      <a href="#{{ bundle.slug }}" class="purpose-tab">
+        <strong>{{ bundle.name }}</strong>
+        <small>{{ bundle.formatted_price }} &bull; Save {{ bundle.discount_pct|int }}%</small>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- Preconfigured Bundles List -->
+<section class="section-block">
+  <div class="container">
+    {% if bundles %}
+      <div class="bundles-stack">
+        {% for bundle in bundles %}
+          {% set purpose_meta = setup_purposes.get(bundle.purpose) %}
+          <article
+            class="bundle-detail-card"
+            id="{{ bundle.slug }}"
+            data-discount-pct="{{ bundle.discount_pct }}"
+          >
+            <form action="{{ url_for('bundle_add_to_cart', slug=bundle.slug) }}" method="post" class="bundle-customizer-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+              <!-- Bundle Card Header -->
+              <div class="bundle-detail-header">
+                <div>
+                  <div class="bundle-badges-row">
+                    <span class="discount-pill">Save {{ bundle.discount_pct|int }}%</span>
+                    <span class="use-case-chip">
+                      {{ purpose_meta.label if purpose_meta else bundle.purpose.replace('_', ' ').title() }}
+                    </span>
+                    {% if bundle.is_available %}
+                      <span class="stock-badge in-stock">All Items Ready to Ship</span>
+                    {% else %}
+                      <span class="stock-badge low-stock">Partial Stock — Customizable</span>
+                    {% endif %}
+                  </div>
+                  <h2>{{ bundle.name }}</h2>
+                  <p class="bundle-detail-desc">{{ bundle.description }}</p>
+                </div>
+
+                <div class="bundle-header-price">
+                  <span class="price-label">Complete Kit Price</span>
+                  <strong class="bundle-hero-price" data-bundle-final>{{ bundle.formatted_price }}</strong>
+                  <small class="savings-text" data-bundle-savings>
+                    You save {{ bundle.savings_amount | naira }} vs. buying separately
+                  </small>
+                </div>
+              </div>
+
+              <!-- Customizable Component Checklist -->
+              <div class="bundle-components-wrap">
+                <div class="bundle-components-head">
+                  <h3>Included Workstation Components ({{ bundle.items|length }} Items)</h3>
+                  <small>Uncheck any item you do not need (bundle discount applies to 2+ selected items)</small>
+                </div>
+
+                <div class="bundle-component-list">
+                  {% for entry in bundle.items %}
+                    {% set prod = entry.product %}
+                    {% set qty = entry.quantity %}
+                    {% set line_subtotal = prod.price * qty %}
+                    <label class="bundle-component-row {% if not prod.is_available %}unavailable{% endif %}">
+                      <div class="setup-check-col">
+                        <input
+                          type="checkbox"
+                          name="product_ids"
+                          value="{{ prod.id }}"
+                          class="bundle-item-checkbox"
+                          data-price="{{ prod.price }}"
+                          data-quantity="{{ qty }}"
+                          {% if prod.is_available %}checked{% endif %}
+                        >
+                      </div>
+
+                      <div class="setup-thumb-col">
+                        <img src="{{ prod.image_url }}" alt="{{ prod.name }}" loading="lazy">
+                      </div>
+
+                      <div class="setup-info-col">
+                        <div class="setup-item-meta">
+                          <span class="product-brand">{{ prod.brand }}</span>
+                          <span class="stock-badge {{ prod.stock_badge_class }}">{{ prod.stock_status }}</span>
+                          <span class="product-sku">SKU: {{ prod.sku }}</span>
+                        </div>
+                        <strong>
+                          <a href="{{ url_for('product_detail', product_id=prod.id) }}">{{ prod.name }}</a>
+                        </strong>
+                        <p>{{ prod.description }}</p>
+                        {% if not prod.is_available %}
+                          <small class="field-error">
+                            Currently out of stock — left unchecked so you can add the remaining kit items.
+                          </small>
+                        {% endif %}
+                      </div>
+
+                      <div class="setup-price-col">
+                        <span class="qty-pill">Qty: {{ qty }}</span>
+                        <strong class="product-price">{{ line_subtotal | naira }}</strong>
+                        <small>{{ prod.formatted_price }} each</small>
+                      </div>
+                    </label>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Bundle Pricing Summary & Submit Footer -->
+              <div class="bundle-detail-footer">
+                <div class="bundle-summary-metrics">
+                  <div class="metric-pair">
+                    <span>Individual Items Total:</span>
+                    <del class="strike-price" data-bundle-individual>{{ bundle.individual_total | naira }}</del>
+                  </div>
+                  <div class="metric-pair">
+                    <span>Kit Discount ({{ bundle.discount_pct|int }}%):</span>
+                    <strong class="text-success" data-bundle-discount-amt>-{{ bundle.savings_amount | naira }}</strong>
+                  </div>
+                  <div class="metric-pair metric-pair-total">
+                    <span>Selected Kit Total:</span>
+                    <strong data-bundle-total>{{ bundle.formatted_price }}</strong>
+                  </div>
+                </div>
+
+                <div class="bundle-footer-actions">
+                  <a
+                    href="{{ url_for('setup_builder', purpose=bundle.purpose) }}"
+                    class="btn btn-outline"
+                  >
+                    Open in Setup Builder
+                  </a>
+                  <button type="submit" class="btn btn-primary btn-lg">
+                    Add Selected Kit to Cart
+                  </button>
+                </div>
+              </div>
+            </form>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <h3>No workstation kits are currently active</h3>
+        <p>Explore our full catalogue or assemble a custom workstation in the Setup Builder.</p>
+        <a href="{{ url_for('catalogue') }}" class="btn btn-primary">Browse Catalogue</a>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

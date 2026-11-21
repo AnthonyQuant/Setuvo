@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}{{ status_code }} {{ error_title }} — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="section-block">
+  <div class="container">
+    <div class="empty-state error-state-card">
+      <span class="eyebrow-badge">HTTP {{ status_code }}</span>
+      <h1>{{ error_title }}</h1>
+      <p>{{ error_message }}</p>
+
+      {% if error_details %}
+        <p class="muted-note"><strong>Details:</strong> {{ error_details }}</p>
+      {% endif %}
+
+      <div class="empty-state-actions">
+        <a href="{{ url_for('index') }}" class="btn btn-primary">Return to Homepage</a>
+        <a href="{{ url_for('catalogue') }}" class="btn btn-secondary">Browse Catalogue</a>
+        <a href="{{ url_for('setup_builder') }}" class="btn btn-outline">Open Setup Builder</a>
+        <a href="{{ url_for('track_order') }}" class="btn btn-outline">Track an Order</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

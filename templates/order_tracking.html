@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if order %}
+    Track Order {{ order.order_number }} — {{ app_name }}
+  {% else %}
+    Track Your Order — {{ app_name }}
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="page-header">
+  <div class="container page-header-inner">
+    <div>
+      <span class="eyebrow-badge">Self-Service Dispatch Tracker</span>
+      <h1>Track Your Setuvo Order</h1>
+      <p class="page-lead">
+        Enter your <strong>STV-YYYYMMDD-XXXX</strong> order reference and the email address used at checkout
+        to inspect live fulfillment progress and your itemized Naira receipt.
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      <a href="{{ url_for('catalogue') }}" class="btn btn-outline btn-sm">
+        Browse Catalogue
+      </a>
+      <a href="{{ url_for('cart_view') }}" class="btn btn-primary btn-sm">
+        View Cart ({{ cart_count }})
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Order Lookup Form & Live Tracking Result -->
+<section class="section-block">
+  <div class="container">
+    <!-- Lookup Form Card -->
+    <div class="comparison-selector-card tracking-lookup-card">
+      <form action="{{ url_for('track_order') }}" method="post" class="tracking-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="tracking-inputs-grid">
+          <div class="form-field">
+            <label for="order_number">Order Reference Number <span class="required-mark">*</span></label>
+            <input
+              type="text"
+              id="order_number"
+              name="order_number"
+              value="{{ form.order_number.data or '' }}"
+              placeholder="e.g. STV-20261121-1001"
+              autocomplete="off"
+              required
+            >
+            {% for err in form.order_number.errors %}
+              <small class="field-error">{{ err }}</small>
+            {% endfor %}
+          </div>
+
+          <div class="form-field">
+            <label for="email">Checkout Email Address <span class="required-mark">*</span></label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value="{{ form.email.data or '' }}"
+              placeholder="e.g. chinedu@example.ng"
+              autocomplete="email"
+              required
+            >
+            {% for err in form.email.errors %}
+              <small class="field-error">{{ err }}</small>
+            {% endfor %}
+          </div>
+
+          <div class="form-field tracking-submit-field">
+            <button type="submit" class="btn btn-primary btn-block">
+              Find Order
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Tracked Order Status & Details -->
+    {% if order %}
+      <div class="tracking-result-wrap">
+        <!-- Top Status Summary Strip -->
+        <div class="receipt-banner-card">
+          <div class="receipt-ref-block">
+            <span class="price-label">Order Number</span>
+            <strong class="receipt-order-number">{{ order.order_number }}</strong>
+          </div>
+
+          <div class="receipt-status-block">
+            <span class="price-label">Current Status</span>
+            <span class="status-badge {{ order.status | status_badge_class }}">{{ order.status }}</span>
+          </div>
+
+          <div class="receipt-date-block">
+            <span class="price-label">Last Updated</span>
+            <strong>{{ order.updated_at | short_date }}</strong>
+          </div>
+        </div>
+
+        <!-- Visual Fulfillment Progress Tracker -->
+        {% if order.status == 'Cancelled' %}
+          <div class="budget-warning-box" role="alert">
+            <strong>Order Cancelled</strong>
+            <p>
+              This order was cancelled on {{ order.updated_at | short_date }} and all reserved workstation
+              units were automatically restored to Setuvo inventory.
+            </p>
+          </div>
+        {% else %}
+          {% set stages = [
+            ('Order placed', 'Order Placed', 'Checkout confirmed & stock reserved'),
+            ('Processing', 'Processing', 'Workstation gear packed & verified'),
+            ('Shipped', 'Shipped', 'Dispatched via Nigerian courier / pickup hub'),
+            ('Delivered', 'Delivered', 'Handed over at destination address')
+          ] %}
+          {% set stage_order = {
+            'Order placed': 1,
+            'Processing': 2,
+            'Shipped': 3,
+            'Delivered': 4
+          } %}
+          {% set current_step = stage_order.get(order.status, 1) %}
+
+          <div class="spec-panel tracking-timeline-card">
+            <div class="receipt-items-head">
+              <h2>Fulfillment Progress</h2>
+              <small class="muted-note">Estimated arrival: {{ order.delivery_eta }}</small>
+            </div>
+
+            <ol class="tracking-stepper" aria-label="Order fulfillment steps">
+              {% for code, label, desc in stages %}
+                {% set step_num = loop.index %}
+                {% set is_done = step_num < current_step %}
+                {% set is_current = step_num == current_step %}
+                <li class="tracking-step {% if is_done %}completed{% endif %} {% if is_current %}current{% endif %}">
+                  <div class="step-marker">
+                    {% if is_done %}
+                      &#10003;
+                    {% else %}
+                      {{ step_num }}
+                    {% endif %}
+                  </div>
+                  <div class="step-copy">
+                    <strong>{{ label }}</strong>
+                    <small>{{ desc }}</small>
+                  </div>
+                </li>
+              {% endfor %}
+            </ol>
+          </div>
+        {% endif %}
+
+        <!-- Two-Column Shipment Info & Financial Summary -->
+        <div class="checkout-layout">
+          <div class="receipt-main-col">
+            <!-- Delivery & Recipient Information -->
+            <div class="spec-panel receipt-panel">
+              <h2>Shipment &amp; Recipient Information</h2>
+              <table class="spec-table">
+                <tbody>
+                  <tr>
+                    <th scope="row">Recipient Name</th>
+                    <td>{{ order.customer_name }}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Email Address</th>
+                    <td>{{ order.customer_email }}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Contact Phone</th>
+                    <td>{{ order.customer_phone }}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Delivery Zone</th>
+                    <td>{{ order.delivery_zone_label }} ({{ order.delivery_eta }})</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Destination Address</th>
+                    <td>{{ order.delivery_address }}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Payment Method</th>
+                    <td>{{ order.payment_method }}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Order Placed</th>
+                    <td>{{ order.created_at | short_date }}</td>
+                  </tr>
+                  {% if order.notes %}
+                    <tr>
+                      <th scope="row">Delivery Notes</th>
+                      <td>{{ order.notes }}</td>
+                    </tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Itemized Purchased Gear -->
+            <div class="spec-panel receipt-panel">
+              <div class="receipt-items-head">
+                <h2>Items in This Shipment ({{ order.total_units }} Unit{{ 's' if order.total_units != 1 else '' }})</h2>
+                <small class="muted-note">Historical checkout prices</small>
+              </div>
+
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Product</th>
+                      <th scope="col">SKU</th>
+                      <th scope="col" class="text-center">Qty</th>
+                      <th scope="col" class="text-right">Unit Price</th>
+                      <th scope="col" class="text-right">Line Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in order.items %}
+                      <tr>
+                        <td>
+                          {% if item.product_id %}
+                            <a href="{{ url_for('product_detail', product_id=item.product_id) }}" class="table-item-link">
+                              {{ item.product_name }}
+                            </a>
+                          {% else %}
+                            <strong>{{ item.product_name }}</strong>
+                          {% endif %}
+                        </td>
+                        <td><span class="product-sku">{{ item.product_sku }}</span></td>
+                        <td class="text-center">{{ item.quantity }}</td>
+                        <td class="text-right">{{ item.unit_price | naira }}</td>
+                        <td class="text-right"><strong>{{ item.line_total | naira }}</strong></td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Financial Totals & Receipt Link -->
+          <aside class="checkout-summary-sidebar" aria-label="Tracked Order Totals">
+            <div class="summary-card">
+              <div class="summary-card-header">
+                <span class="card-kicker">Payment Summary</span>
+                <h2>Order Totals</h2>
+              </div>
+
+              <dl class="summary-breakdown">
+                <div class="summary-row">
+                  <dt>Items Subtotal</dt>
+                  <dd>{{ order.subtotal | naira }}</dd>
+                </div>
+                <div class="summary-row">
+                  <dt>Delivery ({{ order.delivery_zone_label }})</dt>
+                  <dd>
+                    {% if order.delivery_fee == 0 %}
+                      Free
+                    {% else %}
+                      {{ order.delivery_fee | naira }}
+                    {% endif %}
+                  </dd>
+                </div>
+                <div class="summary-row summary-row-total">
+                  <dt>Total Paid / Payable</dt>
+                  <dd>{{ order.total_amount | naira }}</dd>
+                </div>
+              </dl>
+
+              <div class="cart-checkout-actions">
+                <a
+                  href="{{ url_for('download_order_receipt', order_number=order.order_number) }}"
+                  class="btn btn-outline btn-block"
+                >
+                  Download Receipt (PNG)
+                </a>
+                <a
+                  href="{{ url_for('order_confirmation', order_number=order.order_number) }}"
+                  class="btn btn-outline btn-block"
+                >
+                  Open Printable Receipt
+                </a>
+                <a href="{{ url_for('catalogue') }}" class="btn btn-primary btn-block">
+                  Shop More Workstation Gear
+                </a>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    {% else %}
+      <!-- Helpful Guidance Before Lookup -->
+      <div class="empty-state">
+        <h3>Locate any Setuvo order in seconds</h3>
+        <p>
+          Enter your order reference (for example, <strong>STV-20261121-1001</strong>) and the email
+          address you entered during guest checkout. Both details must match for privacy protection.
+        </p>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

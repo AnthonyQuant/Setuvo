@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Compare Workstation Specs Side-by-Side — {{ app_name }}{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="page-header">
+  <div class="container page-header-inner">
+    <div>
+      <span class="eyebrow-badge">Technical Spec Matrix</span>
+      <h1>Compare Products Side-by-Side</h1>
+      <p class="page-lead">
+        Evaluate 2 to 3 workstation peripherals across Naira pricing, stock availability,
+        recommended workflows, and technical specifications before adding to your cart.
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <a href="{{ url_for('catalogue') }}" class="btn btn-outline btn-sm">
+        Browse Catalogue
+      </a>
+      <a href="{{ url_for('setup_builder') }}" class="btn btn-primary btn-sm">
+        Open Setup Builder
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Product Selector Form -->
+<section class="section-block">
+  <div class="container">
+    <div class="comparison-selector-card">
+      <form action="{{ url_for('compare_products') }}" method="get" class="comparison-form">
+        <div class="comparison-grid-inputs">
+          <div class="form-field">
+            <label for="product_1">First Product</label>
+            <select id="product_1" name="product_1" required>
+              {% for val, label in form.product_1.choices %}
+                <option value="{{ val }}" {% if form.product_1.data == val %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+            {% for err in form.product_1.errors %}
+              <small class="field-error">{{ err }}</small>
+            {% endfor %}
+          </div>
+
+          <div class="form-field">
+            <label for="product_2">Second Product</label>
+            <select id="product_2" name="product_2" required>
+              {% for val, label in form.product_2.choices %}
+                <option value="{{ val }}" {% if form.product_2.data == val %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+            {% for err in form.product_2.errors %}
+              <small class="field-error">{{ err }}</small>
+            {% endfor %}
+          </div>
+
+          <div class="form-field">
+            <label for="product_3">Third Product (Optional)</label>
+            <select id="product_3" name="product_3">
+              {% for val, label in form.product_3.choices %}
+                <option value="{{ val }}" {% if (form.product_3.data or 0) == val %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+            {% for err in form.product_3.errors %}
+              <small class="field-error">{{ err }}</small>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="comparison-selector-footer">
+          <small class="muted-note">
+            Tip: You can also tick 2–3 products directly on the <a href="{{ url_for('catalogue') }}">Catalogue page</a> to compare them here.
+          </small>
+          <div class="comparison-selector-actions">
+            <a href="{{ url_for('compare_products') }}" class="btn btn-outline btn-sm">Reset</a>
+            <button type="submit" class="btn btn-primary">Compare Selected Gear</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Side-by-Side Comparison Matrix -->
+    {% if comparison %}
+      <div class="comparison-table-wrap">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th scope="col" class="comparison-attr-col">
+                <span class="section-kicker">Comparing {{ comparison.products|length }} Items</span>
+                <h2>Product Overview</h2>
+                <p class="muted-note">Highlighted rows indicate differences in technical specs.</p>
+              </th>
+
+              {% for prod in comparison.products %}
+                <th scope="col" class="comparison-product-col">
+                  <div class="comp-product-head">
+                    <a href="{{ url_for('product_detail', product_id=prod.id) }}" class="comp-thumb-link">
+                      <img src="{{ prod.image_url }}" alt="{{ prod.name }}" loading="lazy">
+                    </a>
+                    <span class="stock-badge {{ prod.stock_badge_class }}">{{ prod.stock_status }}</span>
+                    <span class="product-brand">{{ prod.brand }}</span>
+                    <h3>
+                      <a href="{{ url_for('product_detail', product_id=prod.id) }}">{{ prod.name }}</a>
+                    </h3>
+                    <strong class="comp-price">{{ prod.formatted_price }}</strong>
+
+                    <div class="comp-head-actions">
+                      {% if prod.is_available %}
+                        <form action="{{ url_for('cart_add') }}" method="post" class="inline-form grow-form">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="product_id" value="{{ prod.id }}">
+                          <input type="hidden" name="quantity" value="1">
+                          <input type="hidden" name="next" value="{{ request.full_path }}">
+                          <button type="submit" class="btn btn-primary btn-sm btn-block">Add to Cart</button>
+                        </form>
+                      {% else %}
+                        <button type="button" class="btn btn-disabled btn-sm grow-form" disabled>
+                          Out of Stock
+                        </button>
+                      {% endif %}
+
+                      <form action="{{ url_for('wishlist_toggle', product_id=prod.id) }}" method="post" class="inline-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="next" value="{{ request.full_path }}">
+                        {% set saved = prod.id in wishlist_ids %}
+                        <button
+                          type="submit"
+                          class="btn btn-outline btn-sm {% if saved %}btn-saved{% endif %}"
+                        >
+                          {{ 'Saved' if saved else 'Save' }}
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </th>
+              {% endfor %}
+            </tr>
+          </thead>
+
+          <tbody>
+            <!-- Core Catalogue Attributes -->
+            <tr class="comparison-section-divider">
+              <th colspan="{{ comparison.products|length + 1 }}">Core Catalogue &amp; Pricing Details</th>
+            </tr>
+            {% for row in comparison.core_rows %}
+              <tr>
+                <th scope="row" class="comparison-attr-cell">{{ row['attribute'] }}</th>
+                {% for val in row['values'] %}
+                  <td class="comparison-val-cell">{{ val }}</td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+
+            <!-- Technical Specifications -->
+            {% if comparison.spec_rows %}
+              <tr class="comparison-section-divider">
+                <th colspan="{{ comparison.products|length + 1 }}">Technical Specifications</th>
+              </tr>
+              {% for row in comparison.spec_rows %}
+                <tr class="{% if not row['all_equal'] %}spec-diff-row{% endif %}">
+                  <th scope="row" class="comparison-attr-cell">
+                    <span>{{ row['attribute'] }}</span>
+                    {% if not row['all_equal'] %}
+                      <span class="diff-pill">Differs</span>
+                    {% endif %}
+                  </th>
+                  {% for val in row['values'] %}
+                    <td class="comparison-val-cell">{{ val }}</td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            {% endif %}
+
+            <!-- Bottom Quick Actions Row -->
+            <tr class="comparison-footer-row">
+              <th scope="row" class="comparison-attr-cell">Quick Decision</th>
+              {% for prod in comparison.products %}
+                <td class="comparison-val-cell">
+                  <a href="{{ url_for('product_detail', product_id=prod.id) }}" class="btn btn-outline btn-sm btn-block">
+                    View Full Details
+                  </a>
+                </td>
+              {% endfor %}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <h3>Choose 2 or 3 distinct products above to compare</h3>
+        <p>
+          Select two different workstation items from the dropdown menus above and click
+          <strong>Compare Selected Gear</strong>.
+        </p>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ app_name }} — {{ app_tagline }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  <!-- Top Announcement Strip -->
+  <div class="top-banner">
+    <div class="container top-banner-inner">
+      <span>Curated Study, Developer &amp; Creator Gear • Priced in Nigerian Naira ({{ currency_symbol }})</span>
+      <div class="top-banner-links">
+        <a href="{{ url_for('setup_builder') }}">Budget Setup Builder</a>
+        <span aria-hidden="true">•</span>
+        <a href="{{ url_for('track_order') }}">Track Your Order</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Primary Storefront Header -->
+  <header class="site-header">
+    <div class="container header-main">
+      <a href="{{ url_for('index') }}" class="brand-logo" aria-label="{{ app_name }} Home">
+        <span class="brand-mark">S</span>
+        <span class="brand-text">
+          <strong>{{ app_name }}</strong>
+          <small>Workstation Essentials</small>
+        </span>
+      </a>
+
+      <!-- Global Catalogue Quick Search -->
+      <form action="{{ url_for('catalogue') }}" method="get" class="header-search" role="search">
+        <input
+          type="search"
+          name="q"
+          value="{{ request.args.get('q', '') }}"
+          placeholder="Search keyboards, stands, ANC headphones, SKU..."
+          aria-label="Search products"
+        >
+        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+      </form>
+
+      <!-- Utility Badges: Wishlist & Cart -->
+      <div class="header-actions">
+        <a
+          href="{{ url_for('wishlist_view') }}"
+          class="utility-pill {% if request.endpoint == 'wishlist_view' %}active{% endif %}"
+          title="Saved Wishlist"
+        >
+          <span>Wishlist</span>
+          <span class="pill-count" id="nav-wishlist-count">{{ wishlist_count }}</span>
+        </a>
+        <a
+          href="{{ url_for('cart_view') }}"
+          class="utility-pill utility-pill-cart {% if request.endpoint in ['cart_view', 'checkout'] %}active{% endif %}"
+          title="Shopping Cart"
+        >
+          <span>Cart</span>
+          <span class="pill-count" id="nav-cart-count">{{ cart_count }}</span>
+        </a>
+        <button
+          type="button"
+          class="nav-toggle"
+          id="mobile-nav-toggle"
+          aria-expanded="false"
+          aria-controls="primary-nav"
+        >
+          Menu
+        </button>
+      </div>
+    </div>
+
+    <!-- Primary Navigation Bar -->
+    <nav class="primary-nav" id="primary-nav" aria-label="Main Navigation">
+      <div class="container nav-inner">
+        <ul class="nav-list">
+          <li>
+            <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">
+              Home
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('catalogue') }}" class="{% if request.endpoint in ['catalogue', 'product_detail'] %}active{% endif %}">
+              Catalogue
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('setup_builder') }}" class="nav-highlight {% if request.endpoint == 'setup_builder' %}active{% endif %}">
+              Build Your Setup
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('bundles_page') }}" class="{% if request.endpoint == 'bundles_page' %}active{% endif %}">
+              Workstation Kits
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('compare_products') }}" class="{% if request.endpoint == 'compare_products' %}active{% endif %}">
+              Compare Specs
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('track_order') }}" class="{% if request.endpoint == 'track_order' %}active{% endif %}">
+              Track Order
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('analytics_dashboard') }}" class="{% if request.endpoint == 'analytics_dashboard' %}active{% endif %}">
+              Sales &amp; Stock Analytics
+            </a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Category Quick-Filter Strip -->
+    {% if nav_categories %}
+    <div class="category-strip">
+      <div class="container category-strip-inner">
+        {% for cat in nav_categories %}
+          <a
+            href="{{ url_for('catalogue', category=cat.slug) }}"
+            class="cat-chip {% if request.args.get('category') == cat.slug %}active{% endif %}"
+          >
+            {{ cat.name }}
+            <span class="cat-chip-count">{{ cat.product_count }}</span>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </header>
+
+  <!-- Flash Notification Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="container flash-stack" role="status" aria-live="polite">
+        {% for category, message in messages %}
+          <div class="flash-alert flash-{{ category }}">
+            <span>{{ message }}</span>
+            <button type="button" class="flash-close" aria-label="Dismiss message">&times;</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Main Page Content -->
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Storefront Footer -->
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-col">
+        <div class="brand-logo footer-brand">
+          <span class="brand-mark">S</span>
+          <span class="brand-text">
+            <strong>{{ app_name }}</strong>
+            <small>{{ app_tagline }}</small>
+          </span>
+        </div>
+        <p class="footer-copy">
+          Purpose-built study, coding, and creator hardware curated for Nigerian students,
+          software engineers, and digital creators—with transparent Naira pricing and
+          zone-based nationwide delivery.
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Shop &amp; Tools</h4>
+        <ul class="footer-links">
+          <li><a href="{{ url_for('catalogue') }}">Full Product Catalogue</a></li>
+          <li><a href="{{ url_for('setup_builder') }}">Curated Workstation Setup Builder</a></li>
+          <li><a href="{{ url_for('bundles_page') }}">Preconfigured Workstation Kits</a></li>
+          <li><a href="{{ url_for('compare_products') }}">Side-by-Side Spec Comparison</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Orders &amp; Operations</h4>
+        <ul class="footer-links">
+          <li><a href="{{ url_for('cart_view') }}">Shopping Cart ({{ cart_count }})</a></li>
+          <li><a href="{{ url_for('wishlist_view') }}">Saved Wishlist ({{ wishlist_count }})</a></li>
+          <li><a href="{{ url_for('track_order') }}">Order Status Tracking</a></li>
+          <li><a href="{{ url_for('analytics_dashboard') }}">Sales &amp; Inventory Analytics</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Nigerian Delivery Hubs</h4>
+        <ul class="footer-links footer-meta">
+          <li>Benin City Pickup Hub (UNIBEN / Ugbowo) — Free</li>
+          <li>Edo State Local Dispatch — ₦2,500</li>
+          <li>Lagos, Abuja &amp; Nationwide Express</li>
+          <li>Pay on Delivery (Demo Checkout)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="container footer-bottom-inner">
+        <span>&copy; {{ current_year }} {{ app_name }}. Built with Flask, SQLite, Pandas &amp; Plotly.</span>
+        <span>All catalogue prices in Nigerian Naira (NGN).</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/setuvo.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

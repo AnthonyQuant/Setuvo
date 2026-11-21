@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Guest Checkout — {{ app_name }}{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="page-header">
+  <div class="container page-header-inner">
+    <div>
+      <span class="eyebrow-badge">Fast Guest Checkout &bull; No Account Needed</span>
+      <h1>Complete Your Order</h1>
+      <p class="page-lead">
+        Enter your contact and Nigerian delivery details below. Your prices and stock quantities
+        are locked in immediately upon placing your order.
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      <a href="{{ url_for('cart_view') }}" class="btn btn-outline btn-sm">
+        &larr; Back to Cart
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Main Checkout Layout -->
+<section class="section-block">
+  <div class="container checkout-layout">
+    <!-- Left Column: Guest Customer & Delivery Form -->
+    <div class="checkout-form-col">
+      <form action="{{ url_for('checkout') }}" method="post" class="checkout-card" id="guest-checkout-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Section 1: Customer Contact Details -->
+        <div class="checkout-section">
+          <div class="setup-step-header">
+            <span class="step-pill">1</span>
+            <h2>Contact Information</h2>
+          </div>
+
+          <div class="checkout-fields-grid">
+            <div class="form-field form-field-full">
+              <label for="full_name">Full Name <span class="required-mark">*</span></label>
+              <input
+                type="text"
+                id="full_name"
+                name="full_name"
+                value="{{ form.full_name.data or '' }}"
+                placeholder="e.g. Chinedu Okafor"
+                autocomplete="name"
+                required
+              >
+              {% for err in form.full_name.errors %}
+                <small class="field-error">{{ err }}</small>
+              {% endfor %}
+            </div>
+
+            <div class="form-field">
+              <label for="email">Email Address <span class="required-mark">*</span></label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value="{{ form.email.data or '' }}"
+                placeholder="e.g. chinedu@example.ng"
+                autocomplete="email"
+                required
+              >
+              <small class="field-hint">Used for order confirmation and self-service tracking.</small>
+              {% for err in form.email.errors %}
+                <small class="field-error">{{ err }}</small>
+              {% endfor %}
+            </div>
+
+            <div class="form-field">
+              <label for="phone">Phone Number <span class="required-mark">*</span></label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                value="{{ form.phone.data or '' }}"
+                placeholder="e.g. 08031234567 or +2348031234567"
+                autocomplete="tel"
+                required
+              >
+              <small class="field-hint">Dispatch riders call this number prior to drop-off.</small>
+              {% for err in form.phone.errors %}
+                <small class="field-error">{{ err }}</small>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Nigerian Delivery Zone & Address -->
+        <div class="checkout-section">
+          <div class="setup-step-header">
+            <span class="step-pill">2</span>
+            <h2>Nigerian Delivery Zone &amp; Address</h2>
+          </div>
+
+          <div class="checkout-fields-grid">
+            <div class="form-field form-field-full">
+              <label for="checkout_delivery_zone">Delivery Zone <span class="required-mark">*</span></label>
+              <select id="checkout_delivery_zone" name="delivery_zone" required>
+                {% set active_zone = form.delivery_zone.data or cart['delivery_zone'] %}
+                {% for z in zone_options %}
+                  <option
+                    value="{{ z['slug'] }}"
+                    data-fee="{{ z['fee'] }}"
+                    data-eta="{{ z['eta'] }}"
+                    data-label="{{ z['label'] }}"
+                    {% if active_zone == z['slug'] %}selected{% endif %}
+                  >
+                    {{ z['label'] }} — {{ z['formatted_fee'] }} ({{ z['eta'] }})
+                  </option>
+                {% endfor %}
+              </select>
+              {% for err in form.delivery_zone.errors %}
+                <small class="field-error">{{ err }}</small>
+              {% endfor %}
+            </div>
+
+            <div class="form-field form-field-full">
+              <label for="address">Street, Hostel, or Office Address <span class="required-mark">*</span></label>
+              <textarea
+                id="address"
+                name="address"
+                rows="3"
+                placeholder="e.g. Hall 3, Block B, UNIBEN Ugbowo Campus, Benin City, Edo State"
+                autocomplete="street-address"
+                required
+              >{{ form.address.data or '' }}</textarea>
+              {% for err in form.address.errors %}
+                <small class="field-error">{{ err }}</small>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Payment Method & Dispatch Notes -->
+        <div class="checkout-section">
+          <div class="setup-step-header">
+            <span class="step-pill">3</span>
+            <h2>Payment &amp; Dispatch Instructions</h2>
+          </div>
+
+          <div class="checkout-fields-grid">
+            <div class="form-field form-field-full">
+              <label for="payment_method">Payment Option <span class="required-mark">*</span></label>
+              <select id="payment_method" name="payment_method" required>
+                {% for val, label in form.payment_method.choices %}
+                  <option value="{{ val }}" {% if (form.payment_method.data or 'Pay on Delivery (Demo)') == val %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                {% endfor %}
+              </select>
+              <small class="field-hint">
+                Simulated demonstration checkout: no live card processing is performed.
+              </small>
+              {% for err in form.payment_method.errors %}
+                <small class="field-error">{{ err }}</small>
+              {% endfor %}
+            </div>
+
+            <div class="form-field form-field-full">
+              <label for="notes">Delivery Notes (Optional)</label>
+              <textarea
+                id="notes"
+                name="notes"
+                rows="2"
+                placeholder="e.g. Landmark near campus gate, preferred call window, or hostel porter instructions"
+              >{{ form.notes.data or '' }}</textarea>
+              {% for err in form.notes.errors %}
+                <small class="field-error">{{ err }}</small>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Order Bar -->
+        <div class="checkout-submit-bar">
+          <a href="{{ url_for('cart_view') }}" class="btn btn-outline">
+            Modify Cart
+          </a>
+          <button type="submit" class="btn btn-primary btn-lg">
+            Place Order (<span id="checkout-btn-total">{{ cart['formatted_total_amount'] }}</span>)
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Right Column: Sticky Itemized Receipt Preview -->
+    <aside class="checkout-summary-sidebar" aria-label="Checkout Order Summary">
+      <div
+        class="summary-card"
+        id="checkout-summary-card"
+        data-subtotal="{{ cart['subtotal'] }}"
+      >
+        <div class="summary-card-header">
+          <span class="card-kicker">Final Order Review</span>
+          <h2>
+            {{ cart['total_units'] }} Item{{ 's' if cart['total_units'] != 1 else '' }} in Order
+          </h2>
+        </div>
+
+        <!-- Compact Line Items -->
+        <ul class="checkout-mini-items">
+          {% for entry in cart['cart_item_objects'] %}
+            {% set prod = entry.product %}
+            <li class="checkout-mini-item">
+              <div class="checkout-mini-info">
+                <strong>{{ prod.name }}</strong>
+                <small>{{ entry.quantity }} &times; {{ prod.formatted_price }} &bull; {{ prod.sku }}</small>
+              </div>
+              <strong class="checkout-mini-price">{{ entry.line_total | naira }}</strong>
+            </li>
+          {% endfor %}
+        </ul>
+
+        <!-- Totals Breakdown -->
+        <dl class="summary-breakdown">
+          <div class="summary-row">
+            <dt>Items Subtotal</dt>
+            <dd>{{ cart['formatted_subtotal'] }}</dd>
+          </div>
+          <div class="summary-row">
+            <dt>
+              Delivery (<span id="checkout-zone-label">{{ cart['delivery_zone_label'] }}</span>)
+            </dt>
+            <dd id="checkout-delivery-fee">{{ cart['formatted_delivery_fee'] }}</dd>
+          </div>
+          <div class="summary-row">
+            <dt>Estimated Arrival</dt>
+            <dd id="checkout-delivery-eta">{{ cart['delivery_eta'] }}</dd>
+          </div>
+          <div class="summary-row summary-row-total">
+            <dt>Amount Payable (NGN)</dt>
+            <dd id="checkout-grand-total">{{ cart['formatted_total_amount'] }}</dd>
+          </div>
+        </dl>
+
+        <p class="checkout-reassurance">
+          By placing this order, stock is reserved immediately and you will receive a unique
+          <strong>STV-YYYYMMDD-XXXX</strong> receipt for tracking.
+        </p>
+      </div>
+    </aside>
+  </div>
+</section>
+{% endblock %}

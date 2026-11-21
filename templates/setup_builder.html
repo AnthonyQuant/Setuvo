@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Curated Workstation Setup Builder — {{ app_name }}{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="page-header">
+  <div class="container page-header-inner">
+    <div>
+      <span class="eyebrow-badge">Interactive Naira Budget Planner</span>
+      <h1>Curated Workstation Setup Builder</h1>
+      <p class="page-lead">
+        Choose your primary workflow, set a Naira target budget, and tick the peripherals you need.
+        Setuvo calculates your running total and alerts you immediately if your build exceeds budget.
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <a href="{{ url_for('bundles_page') }}" class="btn btn-outline btn-sm">
+        View Preconfigured Kits
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Purpose Quick-Switch Tabs -->
+<section class="purpose-tabs-bar">
+  <div class="container purpose-tabs-inner">
+    {% for opt in purpose_options %}
+      <a
+        href="{{ url_for('setup_builder', purpose=opt.slug, budget=opt.default_budget|int) }}"
+        class="purpose-tab {% if evaluation.purpose == opt.slug %}active{% endif %}"
+      >
+        <strong>{{ opt.label }}</strong>
+        <small>Default: {{ opt.formatted_default_budget }}</small>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Main Setup Builder Layout -->
+<section class="section-block">
+  <div class="container setup-builder-layout">
+    <!-- Left Column: Purpose, Budget & Curated Product Checklist -->
+    <div class="setup-builder-main">
+      <form action="{{ url_for('setup_builder') }}" method="post" id="setup-builder-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Step 1: Configure Workflow Purpose & Target Budget -->
+        <div class="setup-config-card">
+          <div class="setup-step-header">
+            <span class="step-pill">Step 1</span>
+            <h2>Configure Your Purpose &amp; Target Budget</h2>
+          </div>
+
+          <div class="setup-config-grid">
+            <div class="form-field">
+              <label for="setup-purpose">Workstation Purpose</label>
+              <select id="setup-purpose" name="purpose">
+                {% for val, label in form.purpose.choices %}
+                  <option value="{{ val }}" {% if evaluation.purpose == val %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label for="setup-budget">Target Budget ({{ currency_symbol }})</label>
+              <input
+                type="number"
+                id="setup-budget"
+                name="budget"
+                min="1000"
+                step="1000"
+                value="{{ evaluation.budget|int }}"
+                required
+              >
+            </div>
+
+            <div class="form-field setup-config-submit">
+              <button type="submit" class="btn btn-secondary btn-block">
+                Update Recommendations &amp; Budget
+              </button>
+            </div>
+          </div>
+
+          <p class="setup-purpose-desc">{{ evaluation.purpose_description }}</p>
+        </div>
+
+        <!-- Step 2: Select Curated Gear by Category -->
+        <div class="setup-step-header setup-step-spaced">
+          <div>
+            <span class="step-pill">Step 2</span>
+            <h2>Select Recommended Hardware ({{ recommendations.total_recommended }} Curated Items)</h2>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Recalculate Total</button>
+        </div>
+
+        {% for group in recommendations.grouped_categories %}
+          <div class="setup-category-block">
+            <div class="setup-category-head">
+              <h3>{{ group.category_name }}</h3>
+              <span>{{ group.products|length }} option{{ 's' if group.products|length != 1 else '' }}</span>
+            </div>
+
+            <div class="setup-product-list">
+              {% for item in group.products %}
+                {% set is_checked = item.id in evaluation.selected_ids %}
+                <label class="setup-product-row {% if is_checked %}selected{% endif %} {% if not item.is_available %}unavailable{% endif %}">
+                  <div class="setup-check-col">
+                    <input
+                      type="checkbox"
+                      name="product_ids"
+                      value="{{ item.id }}"
+                      class="setup-item-checkbox"
+                      data-price="{{ item.price }}"
+                      data-name="{{ item.name }}"
+                      {% if is_checked %}checked{% endif %}
+                    >
+                  </div>
+
+                  <div class="setup-thumb-col">
+                    <img src="{{ item.image_url }}" alt="{{ item.name }}" loading="lazy">
+                  </div>
+
+                  <div class="setup-info-col">
+                    <div class="setup-item-meta">
+                      <span class="product-brand">{{ item.brand }}</span>
+                      <span class="stock-badge {{ item.stock_badge_class }}">{{ item.stock_status }}</span>
+                      <span class="product-sku">{{ item.sku }}</span>
+                    </div>
+                    <strong>
+                      <a href="{{ url_for('product_detail', product_id=item.id) }}">{{ item.name }}</a>
+                    </strong>
+                    <p>{{ item.description }}</p>
+                  </div>
+
+                  <div class="setup-price-col">
+                    <strong class="product-price">{{ item.formatted_price }}</strong>
+                    <small>{{ item.stock }} available</small>
+                  </div>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+
+        <div class="setup-bottom-bar">
+          <button type="submit" class="btn btn-secondary">
+            Calculate Selected Setup
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Right Column: Sticky Budget Tracker & Add-to-Cart Summary -->
+    <aside class="setup-summary-sidebar" aria-label="Setup Budget Summary">
+      <div class="summary-card" id="setup-budget-panel" data-budget="{{ evaluation.budget }}">
+        <div class="summary-card-header">
+          <span class="card-kicker">{{ evaluation.purpose_label }}</span>
+          <h2>Workstation Budget Summary</h2>
+        </div>
+
+        <!-- Budget Exceeded Warning Banner -->
+        {% if evaluation.is_over_budget %}
+          <div class="budget-warning-box" id="setup-budget-warning" role="alert">
+            <strong>Budget Exceeded by {{ evaluation.formatted_over_budget }}</strong>
+            <p>{{ evaluation.warning_message }}</p>
+          </div>
+        {% else %}
+          <div class="budget-warning-box" id="setup-budget-warning" role="alert" hidden>
+            <strong>Budget Exceeded</strong>
+            <p></p>
+          </div>
+        {% endif %}
+
+        <!-- Progress Meter -->
+        <div class="budget-meter-wrap">
+          <div class="budget-meter-labels">
+            <span>Budget Utilization</span>
+            <strong id="setup-utilization-text">{{ evaluation.utilization_pct }}%</strong>
+          </div>
+          <div class="budget-meter-track">
+            {% set bar_width = 100 if evaluation.utilization_pct > 100 else evaluation.utilization_pct %}
+            <div
+              class="budget-meter-fill {% if evaluation.is_over_budget %}over-budget{% endif %}"
+              id="setup-utilization-bar"
+              style="width: {{ bar_width }}%;"
+            ></div>
+          </div>
+        </div>
+
+        <!-- Financial Breakdown -->
+        <dl class="summary-breakdown">
+          <div class="summary-row">
+            <dt>Target Budget</dt>
+            <dd id="summary-target-budget">{{ evaluation.formatted_budget }}</dd>
+          </div>
+          <div class="summary-row">
+            <dt>Selected Items (<span id="summary-selected-count">{{ evaluation.selected_count }}</span>)</dt>
+            <dd id="summary-selected-total">{{ evaluation.formatted_selected_total }}</dd>
+          </div>
+          <div class="summary-row summary-row-total">
+            <dt id="summary-remaining-label">
+              {{ 'Over Budget By' if evaluation.is_over_budget else 'Remaining Budget' }}
+            </dt>
+            <dd
+              id="summary-remaining-amount"
+              class="{% if evaluation.is_over_budget %}text-danger{% else %}text-success{% endif %}"
+            >
+              {% if evaluation.is_over_budget %}
+                -{{ evaluation.formatted_over_budget }}
+              {% else %}
+                {{ evaluation.formatted_remaining_budget }}
+              {% endif %}
+            </dd>
+          </div>
+        </dl>
+
+        <!-- Selected Items Mini List -->
+        <div class="selected-setup-items">
+          <h3>Selected Gear</h3>
+          {% if evaluation.selected_products %}
+            <ul class="mini-selected-list" id="summary-selected-list">
+              {% for prod in evaluation.selected_products %}
+                <li>
+                  <span>{{ prod.name }}</span>
+                  <strong>{{ prod.formatted_price }}</strong>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="muted-note" id="summary-empty-note">
+              No items selected yet. Check items on the left and click <strong>Recalculate Total</strong>.
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- One-Click Add Setup to Cart -->
+        {% if evaluation.selected_products %}
+          <form action="{{ url_for('setup_builder_add_to_cart') }}" method="post" class="setup-cart-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="purpose" value="{{ evaluation.purpose }}">
+            <input type="hidden" name="budget" value="{{ evaluation.budget }}">
+            {% for pid in evaluation.selected_ids %}
+              <input type="hidden" name="product_ids" value="{{ pid }}">
+            {% endfor %}
+            <button type="submit" class="btn btn-primary btn-lg btn-block">
+              Add Complete Setup to Cart
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </aside>
+  </div>
+</section>
+{% endblock %}

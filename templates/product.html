@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} — {{ app_name }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb Navigation -->
+<nav class="breadcrumb-bar" aria-label="Breadcrumb">
+  <div class="container">
+    <ol class="breadcrumb-list">
+      <li><a href="{{ url_for('index') }}">Home</a></li>
+      <li><a href="{{ url_for('catalogue') }}">Catalogue</a></li>
+      {% if product.category_slug %}
+        <li>
+          <a href="{{ url_for('catalogue', category=product.category_slug) }}">
+            {{ product.category_name }}
+          </a>
+        </li>
+      {% endif %}
+      <li aria-current="page">{{ product.name }}</li>
+    </ol>
+  </div>
+</nav>
+
+<!-- Main Product Detail Section -->
+<section class="section-block">
+  <div class="container">
+    <div class="product-detail-grid">
+      <!-- Left Column: Product Media & Badges -->
+      <div class="product-detail-media">
+        <div class="detail-image-frame">
+          <img
+            src="{{ product.image_url }}"
+            alt="{{ product.name }}"
+            onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/product_placeholder.svg') }}';"
+          >
+          <span class="stock-badge {{ product.stock_badge_class }}">{{ product.stock_status }}</span>
+          {% if product.is_bestseller %}
+            <span class="tag-badge">Bestseller</span>
+          {% elif product.is_featured %}
+            <span class="tag-badge tag-featured">Featured</span>
+          {% endif %}
+        </div>
+
+        <div class="detail-assurance-grid">
+          <div class="assurance-item">
+            <strong>Transparent NGN Pricing</strong>
+            <span>No hidden FX markups at checkout</span>
+          </div>
+          <div class="assurance-item">
+            <strong>Nationwide Dispatch</strong>
+            <span>Free Benin City pickup • Express Lagos &amp; Abuja</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Pricing, Stock & Purchase Controls -->
+      <div class="product-detail-info">
+        <div class="detail-meta-top">
+          <span class="product-brand">{{ product.brand }}</span>
+          {% if product.subcategory %}
+            <span class="meta-dot">&bull;</span>
+            <span class="product-cat">{{ product.subcategory }}</span>
+          {% endif %}
+          <span class="meta-dot">&bull;</span>
+          <span class="product-sku">SKU: {{ product.sku }}</span>
+        </div>
+
+        <h1 class="detail-title">{{ product.name }}</h1>
+
+        <div class="detail-price-box">
+          <strong class="detail-price">{{ product.formatted_price }}</strong>
+          <span class="detail-stock-note">
+            {% if product.stock > 5 %}
+              In stock ({{ product.stock }} units ready to ship)
+            {% elif product.stock > 0 %}
+              Low stock — only {{ product.stock }} unit{{ 's' if product.stock != 1 else '' }} left
+            {% else %}
+              Currently out of stock
+            {% endif %}
+          </span>
+        </div>
+
+        <p class="detail-description">{{ product.description }}</p>
+
+        <!-- Ideal Workstation Purposes -->
+        {% if product.use_cases %}
+          <div class="detail-use-cases">
+            <span class="detail-label">Recommended For:</span>
+            <div class="use-case-chips">
+              {% for uc in product.use_cases %}
+                {% set uc_meta = setup_purposes.get(uc) %}
+                <a
+                  href="{{ url_for('setup_builder', purpose=uc) }}"
+                  class="use-case-chip"
+                  title="Build a {{ uc_meta.label if uc_meta else uc }} workstation"
+                >
+                  {{ uc_meta.label if uc_meta else uc.replace('_', ' ').title() }}
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        <!-- Add to Cart & Wishlist Controls -->
+        <div class="detail-purchase-box">
+          {% if product.is_available %}
+            <form action="{{ url_for('cart_add') }}" method="post" class="qty-purchase-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="product_id" value="{{ product.id }}">
+              <input type="hidden" name="next" value="{{ url_for('product_detail', product_id=product.id) }}">
+
+              <div class="qty-input-group">
+                <label for="detail-qty">Qty</label>
+                <input
+                  type="number"
+                  id="detail-qty"
+                  name="quantity"
+                  value="1"
+                  min="1"
+                  max="{{ product.stock }}"
+                  required
+                >
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-lg grow-form">
+                Add to Cart — {{ product.formatted_price }}
+              </button>
+            </form>
+          {% else %}
+            <div class="out-of-stock-notice">
+              <strong>Out of Stock:</strong> This item cannot be added to your cart right now.
+              Save it to your wishlist to keep track of it.
+            </div>
+          {% endif %}
+
+          <div class="detail-secondary-actions">
+            <form action="{{ url_for('wishlist_toggle', product_id=product.id) }}" method="post" class="inline-form grow-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="next" value="{{ url_for('product_detail', product_id=product.id) }}">
+              {% set saved = product.id in wishlist_ids %}
+              <button
+                type="submit"
+                class="btn btn-outline btn-block {% if saved %}btn-saved{% endif %}"
+              >
+                {{ 'Saved in Wishlist' if saved else 'Save to Wishlist' }}
+              </button>
+            </form>
+
+            <a
+              href="{{ url_for('compare_products', product_1=product.id) }}"
+              class="btn btn-outline grow-form"
+            >
+              Compare Specs
+            </a>
+          </div>
+        </div>
+
+        <!-- Technical Specifications Table -->
+        {% if product.specifications %}
+          <div class="spec-panel">
+            <h2>Technical Specifications</h2>
+            <table class="spec-table">
+              <tbody>
+                <tr>
+                  <th scope="row">Brand</th>
+                  <td>{{ product.brand }}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Category</th>
+                  <td>{{ product.category_name }}</td>
+                </tr>
+                <tr>
+                  <th scope="row">SKU</th>
+                  <td>{{ product.sku }}</td>
+                </tr>
+                {% for key, value in product.specifications.items() %}
+                  <tr>
+                    <th scope="row">{{ key }}</th>
+                    <td>{{ value }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Complementary Workstation Recommendations -->
+{% if related_products %}
+<section class="section-block section-alt">
+  <div class="container">
+    <div class="section-header">
+      <div>
+        <span class="section-kicker">Complete Your Desk</span>
+        <h2>Recommended Workstation Pairings</h2>
+      </div>
+      <a href="{{ url_for('setup_builder') }}" class="btn btn-outline btn-sm">Open Setup Builder</a>
+    </div>
+
+    <div class="product-grid product-grid-4">
+      {% for item in related_products %}
+        <article class="product-card">
+          <div class="product-card-media">
+            <a href="{{ url_for('product_detail', product_id=item.id) }}">
+              <img
+                src="{{ item.image_url }}"
+                alt="{{ item.name }}"
+                loading="lazy"
+                onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/product_placeholder.svg') }}';"
+              >
+            </a>
+            <span class="stock-badge {{ item.stock_badge_class }}">{{ item.stock_status }}</span>
+          </div>
+
+          <div class="product-card-body">
+            <div class="product-meta-row">
+              <span class="product-brand">{{ item.brand }}</span>
+              <span class="product-cat">{{ item.category_name }}</span>
+            </div>
+
+            <h3 class="product-title">
+              <a href="{{ url_for('product_detail', product_id=item.id) }}">{{ item.name }}</a>
+            </h3>
+
+            <div class="product-price-row">
+              <strong class="product-price">{{ item.formatted_price }}</strong>
+            </div>
+
+            <div class="product-card-actions">
+              <a href="{{ url_for('product_detail', product_id=item.id) }}" class="btn btn-outline btn-sm grow-form">
+                Details
+              </a>
+              {% if item.is_available %}
+                <form action="{{ url_for('cart_add') }}" method="post" class="inline-form grow-form">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="product_id" value="{{ item.id }}">
+                  <input type="hidden" name="quantity" value="1">
+                  <input type="hidden" name="next" value="{{ url_for('product_detail', product_id=product.id) }}">
+                  <button type="submit" class="btn btn-primary btn-sm btn-block">Add</button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Shopping Cart ({{ cart['total_units'] }}) — {{ app_name }}{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="page-header">
+  <div class="container page-header-inner">
+    <div>
+      <span class="eyebrow-badge">Order Review &amp; Shipping Estimator</span>
+      <h1>Your Shopping Cart</h1>
+      <p class="page-lead">
+        {% if cart['is_empty'] %}
+          Your cart is currently empty. Add individual gear or a curated workstation setup to begin.
+        {% else %}
+          Review your selected workstation items, adjust quantities against live stock, and choose your Nigerian delivery zone.
+        {% endif %}
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      <a href="{{ url_for('catalogue') }}" class="btn btn-outline btn-sm">
+        Continue Shopping
+      </a>
+      <a href="{{ url_for('setup_builder') }}" class="btn btn-secondary btn-sm">
+        Open Setup Builder
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Main Cart Content -->
+<section class="section-block">
+  <div class="container">
+    {% if not cart['is_empty'] %}
+      <div class="cart-layout">
+        <!-- Left Column: Cart Line Items -->
+        <div class="cart-items-col">
+          <div class="cart-list-header">
+            <h2>
+              Selected Items ({{ cart['total_units'] }} unit{{ 's' if cart['total_units'] != 1 else '' }} across
+              {{ cart['distinct_items'] }} product{{ 's' if cart['distinct_items'] != 1 else '' }})
+            </h2>
+            <a href="{{ url_for('wishlist_view') }}" class="text-link">
+              View Saved Wishlist ({{ wishlist_count }})
+            </a>
+          </div>
+
+          <div class="cart-items-stack">
+            {% for entry in cart['cart_item_objects'] %}
+              {% set prod = entry.product %}
+              <article class="cart-item-card">
+                <a href="{{ url_for('product_detail', product_id=prod.id) }}" class="cart-item-thumb">
+                  <img src="{{ prod.image_url }}" alt="{{ prod.name }}" loading="lazy">
+                </a>
+
+                <div class="cart-item-details">
+                  <div class="setup-item-meta">
+                    <span class="product-brand">{{ prod.brand }}</span>
+                    <span class="product-cat">{{ prod.category_name }}</span>
+                    <span class="stock-badge {{ prod.stock_badge_class }}">{{ prod.stock_status }}</span>
+                  </div>
+
+                  <h3 class="cart-item-title">
+                    <a href="{{ url_for('product_detail', product_id=prod.id) }}">{{ prod.name }}</a>
+                  </h3>
+
+                  <p class="cart-item-meta-line">
+                    <span>SKU: {{ prod.sku }}</span>
+                    <span>&bull;</span>
+                    <span>Unit Price: <strong>{{ prod.formatted_price }}</strong></span>
+                    <span>&bull;</span>
+                    <span>Max Available: {{ prod.stock }}</span>
+                  </p>
+
+                  <!-- Quantity Update & Remove Controls -->
+                  <div class="cart-item-controls">
+                    <form
+                      action="{{ url_for('cart_update', product_id=prod.id) }}"
+                      method="post"
+                      class="cart-qty-form"
+                    >
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <label for="qty-{{ prod.id }}" class="sr-only">Quantity for {{ prod.name }}</label>
+                      <input
+                        type="number"
+                        id="qty-{{ prod.id }}"
+                        name="quantity"
+                        value="{{ entry.quantity }}"
+                        min="0"
+                        max="{{ prod.stock }}"
+                        class="cart-qty-input"
+                        required
+                      >
+                      <button type="submit" class="btn btn-outline btn-sm">Update Qty</button>
+                    </form>
+
+                    <form
+                      action="{{ url_for('cart_remove', product_id=prod.id) }}"
+                      method="post"
+                      class="inline-form"
+                    >
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-danger-outline btn-sm">Remove</button>
+                    </form>
+                  </div>
+                </div>
+
+                <div class="cart-item-subtotal">
+                  <span class="price-label">Line Total</span>
+                  <strong class="product-price">{{ entry.line_total | naira }}</strong>
+                  <small>{{ entry.quantity }} &times; {{ prod.formatted_price }}</small>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Right Column: Nigerian Delivery Zone Selector & Order Summary -->
+        <aside class="cart-summary-sidebar" aria-label="Cart Summary and Shipping Calculator">
+          <div class="summary-card">
+            <div class="summary-card-header">
+              <span class="card-kicker">Nigerian Delivery Estimator</span>
+              <h2>Order Summary</h2>
+            </div>
+
+            <!-- Interactive Delivery Zone Form -->
+            <form action="{{ url_for('cart_set_zone') }}" method="post" class="zone-selector-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="next" value="{{ url_for('cart_view') }}">
+
+              <label for="delivery_zone">Select Delivery Zone</label>
+              <select
+                id="delivery_zone"
+                name="delivery_zone"
+                data-auto-submit="true"
+              >
+                {% for z in zone_options %}
+                  <option
+                    value="{{ z['slug'] }}"
+                    {% if cart['delivery_zone'] == z['slug'] %}selected{% endif %}
+                  >
+                    {{ z['label'] }} — {{ z['formatted_fee'] }} ({{ z['eta'] }})
+                  </option>
+                {% endfor %}
+              </select>
+
+              <div class="zone-eta-note">
+                <small>
+                  Estimated delivery: <strong>{{ cart['delivery_eta'] }}</strong>
+                </small>
+                <button type="submit" class="btn btn-outline btn-sm">Recalculate Shipping</button>
+              </div>
+            </form>
+
+            <!-- Financial Totals Breakdown -->
+            <dl class="summary-breakdown">
+              <div class="summary-row">
+                <dt>Items Subtotal ({{ cart['total_units'] }} unit{{ 's' if cart['total_units'] != 1 else '' }})</dt>
+                <dd>{{ cart['formatted_subtotal'] }}</dd>
+              </div>
+              <div class="summary-row">
+                <dt>Delivery ({{ cart['delivery_zone_label'] }})</dt>
+                <dd>{{ cart['formatted_delivery_fee'] }}</dd>
+              </div>
+              <div class="summary-row summary-row-total">
+                <dt>Estimated Total (NGN)</dt>
+                <dd>{{ cart['formatted_total_amount'] }}</dd>
+              </div>
+            </dl>
+
+            <!-- Primary Checkout Action -->
+            <div class="cart-checkout-actions">
+              <a href="{{ url_for('checkout') }}" class="btn btn-primary btn-lg btn-block">
+                Proceed to Guest Checkout
+              </a>
+              <a href="{{ url_for('catalogue') }}" class="btn btn-outline btn-block">
+                Add More Items
+              </a>
+            </div>
+
+            <p class="checkout-reassurance">
+              No account registration required. You will receive an instant
+              <strong>STV-YYYYMMDD-XXXX</strong> tracking reference upon checkout.
+            </p>
+          </div>
+        </aside>
+      </div>
+    {% else %}
+      <!-- Empty Cart State -->
+      <div class="empty-state">
+        <h3>Your Setuvo shopping cart is empty</h3>
+        <p>
+          Explore individual ergonomic stands, keyboards, and audio gear—or let our Setup Builder
+          assemble a complete workstation tailored to your Naira budget.
+        </p>
+        <div class="empty-state-actions">
+          <a href="{{ url_for('catalogue') }}" class="btn btn-primary">Browse Product Catalogue</a>
+          <a href="{{ url_for('setup_builder') }}" class="btn btn-secondary">Build Budget Setup</a>
+          <a href="{{ url_for('bundles_page') }}" class="btn btn-outline">Explore Workstation Kits</a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400" role="img" aria-label="Keychron K2 V2 75% Wireless Mechanical Keyboard">
+  <defs>
+    <linearGradient id="bg-STV-KM-001" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <pattern id="grid-STV-KM-001" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="640" height="400" fill="url(#bg-STV-KM-001)"/>
+  <rect width="640" height="400" fill="url(#grid-STV-KM-001)"/>
+
+  <!-- Top Brand & SKU Header -->
+  <rect x="28" y="24" width="136" height="28" rx="14" fill="#e0f2fe"/>
+  <text x="96" y="42" text-anchor="middle" fill="#0f172a" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" font-weight="700">KEYCHRON</text>
+
+  <text x="612" y="42" text-anchor="end" fill="#94a3b8" font-family="monospace" font-size="13" font-weight="700">STV-KM-001</text>
+
+  <!-- Vector Hardware Illustration -->
+  
+      <rect x="145" y="112" width="350" height="132" rx="12" fill="#1e293b" stroke="#38bdf8" stroke-width="3"/>
+      <rect x="160" y="126" width="24" height="18" rx="3" fill="#f97316"/>
+      <g fill="#334155" stroke="#64748b" stroke-width="1">
+        <rect x="190" y="126" width="24" height="18" rx="3"/>
+        <rect x="220" y="126" width="24" height="18" rx="3"/>
+        <rect x="250" y="126" width="24" height="18" rx="3"/>
+        <rect x="280" y="126" width="24" height="18" rx="3"/>
+        <rect x="310" y="126" width="24" height="18" rx="3"/>
+        <rect x="340" y="126" width="24" height="18" rx="3"/>
+        <rect x="370" y="126" width="24" height="18" rx="3"/>
+        <rect x="400" y="126" width="24" height="18" rx="3"/>
+        <rect x="430" y="126" width="48" height="18" rx="3"/>
+        <rect x="160" y="150" width="36" height="18" rx="3"/>
+        <rect x="202" y="150" width="24" height="18" rx="3"/>
+        <rect x="232" y="150" width="24" height="18" rx="3"/>
+        <rect x="262" y="150" width="24" height="18" rx="3"/>
+        <rect x="292" y="150" width="24" height="18" rx="3"/>
+        <rect x="322" y="150" width="24" height="18" rx="3"/>
+        <rect x="352" y="150" width="24" height="18" rx="3"/>
+        <rect x="382" y="150" width="24" height="18" rx="3"/>
+        <rect x="412" y="150" width="66" height="18" rx="3"/>
+        <rect x="160" y="174" width="46" height="18" rx="3"/>
+        <rect x="212" y="174" width="24" height="18" rx="3"/>
+        <rect x="242" y="174" width="24" height="18" rx="3"/>
+        <rect x="272" y="174" width="24" height="18" rx="3"/>
+        <rect x="302" y="174" width="24" height="18" rx="3"/>
+        <rect x="332" y="174" width="24" height="18" rx="3"/>
+        <rect x="362" y="174" width="24" height="18" rx="3"/>
+        <rect x="392" y="174" width="24" height="18" rx="3"/>
+        <rect x="160" y="198" width="30" height="18" rx="3"/>
+        <rect x="196" y="198" width="30" height="18" rx="3"/>
+        <rect x="232" y="198" width="136" height="18" rx="3"/>
+        <rect x="374" y="198" width="30" height="18" rx="3"/>
+        <rect x="410" y="198" width="68" height="18" rx="3"/>
+      </g>
+      <rect x="422" y="174" width="56" height="18" rx="3" fill="#f97316"/>
+    
+
+  <!-- Bottom Product Label Strip -->
+  <rect x="0" y="318" width="640" height="82" fill="rgba(15,23,42,0.78)"/>
+  <line x1="0" y1="318" x2="640" y2="318" stroke="#0ea5e9" stroke-width="2"/>
+  <text x="32" y="352" fill="#ffffff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="700">Keychron K2 V2 75% Wireless Mechanical Ke...</text>
+  <text x="32" y="376" fill="#0ea5e9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" font-weight="600">SETUVO CURATED WORKSTATION HARDWARE</text>
+</svg>

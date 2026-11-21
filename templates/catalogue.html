@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if active_category %}
+    {{ active_category.name }} — {{ app_name }} Catalogue
+  {% else %}
+    Product Catalogue — {{ app_name }}
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<!-- Catalogue Header Banner -->
+<section class="page-header">
+  <div class="container page-header-inner">
+    <div>
+      <span class="eyebrow-badge">
+        {% if active_category %}
+          Category View
+        {% else %}
+          Curated Workstation Hardware
+        {% endif %}
+      </span>
+      <h1>
+        {% if active_category %}
+          {{ active_category.name }}
+        {% else %}
+          All Workstation Gear &amp; Accessories
+        {% endif %}
+      </h1>
+      <p class="page-lead">
+        {% if active_category and active_category.description %}
+          {{ active_category.description }}
+        {% else %}
+          Filter by category, brand, product type, Naira budget range, or live stock status.
+        {% endif %}
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      <a href="{{ url_for('compare_products') }}" class="btn btn-outline btn-sm">
+        Compare Specs Side-by-Side
+      </a>
+      <a href="{{ url_for('setup_builder') }}" class="btn btn-primary btn-sm">
+        Open Setup Builder
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Quick-Compare Floating Selection Bar (Enhanced via setuvo.js) -->
+<div class="compare-bar" id="compare-selection-bar" hidden>
+  <div class="container compare-bar-inner">
+    <span id="compare-bar-status">0 products selected for comparison (select 2–3)</span>
+    <div class="compare-bar-actions">
+      <button type="button" class="btn btn-outline btn-sm" id="compare-clear-btn">Clear</button>
+      <a href="{{ url_for('compare_products') }}" class="btn btn-primary btn-sm" id="compare-launch-btn">
+        Compare Now
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Main Catalogue Grid: Filter Sidebar + Product Results -->
+<section class="section-block">
+  <div class="container catalogue-layout">
+    <!-- Left Sidebar: Multi-Criteria Filters -->
+    <aside class="filter-sidebar" aria-label="Catalogue Filters">
+      <form action="{{ url_for('catalogue') }}" method="get" class="filter-card" id="catalogue-filter-form">
+        <div class="filter-card-header">
+          <h2>Filter Products</h2>
+          <a href="{{ url_for('catalogue') }}" class="text-link">Reset All</a>
+        </div>
+
+        <!-- Keyword Search -->
+        <div class="filter-group">
+          <label for="q">Keyword / SKU</label>
+          <input
+            type="search"
+            id="q"
+            name="q"
+            value="{{ form.q.data or '' }}"
+            placeholder="e.g. Keychron, SSD, STV-LS-001"
+          >
+          {% for err in form.q.errors %}
+            <small class="field-error">{{ err }}</small>
+          {% endfor %}
+        </div>
+
+        <!-- Category Dropdown -->
+        <div class="filter-group">
+          <label for="category">Category</label>
+          <select id="category" name="category">
+            {% for val, label in form.category.choices %}
+              <option value="{{ val }}" {% if (form.category.data or 'all') == val %}selected{% endif %}>
+                {{ label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Brand Dropdown -->
+        <div class="filter-group">
+          <label for="brand">Brand</label>
+          <select id="brand" name="brand">
+            {% for val, label in form.brand.choices %}
+              <option value="{{ val }}" {% if (form.brand.data or 'all') == val %}selected{% endif %}>
+                {{ label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Product Type / Subcategory -->
+        <div class="filter-group">
+          <label for="product_type">Product Type</label>
+          <select id="product_type" name="product_type">
+            {% for val, label in form.product_type.choices %}
+              <option value="{{ val }}" {% if (form.product_type.data or 'all') == val %}selected{% endif %}>
+                {{ label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Price Range in NGN -->
+        <div class="filter-group">
+          <label>Price Range ({{ currency_symbol }})</label>
+          <div class="price-range-row">
+            <div>
+              <input
+                type="number"
+                id="min_price"
+                name="min_price"
+                min="0"
+                step="500"
+                value="{{ form.min_price.data if form.min_price.data is not none else '' }}"
+                placeholder="Min ({{ filter_options.min_price|int }})"
+                aria-label="Minimum Price in Naira"
+              >
+            </div>
+            <span class="range-sep">&ndash;</span>
+            <div>
+              <input
+                type="number"
+                id="max_price"
+                name="max_price"
+                min="0"
+                step="500"
+                value="{{ form.max_price.data if form.max_price.data is not none else '' }}"
+                placeholder="Max ({{ filter_options.max_price|int }})"
+                aria-label="Maximum Price in Naira"
+              >
+            </div>
+          </div>
+          {% for err in form.min_price.errors %}
+            <small class="field-error">{{ err }}</small>
+          {% endfor %}
+          {% for err in form.max_price.errors %}
+            <small class="field-error">{{ err }}</small>
+          {% endfor %}
+        </div>
+
+        <!-- Stock Availability -->
+        <div class="filter-group">
+          <label for="availability">Stock Availability</label>
+          <select id="availability" name="availability">
+            {% for val, label in form.availability.choices %}
+              <option value="{{ val }}" {% if (form.availability.data or 'all') == val %}selected{% endif %}>
+                {{ label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Preserve Sort Selection on Sidebar Submit -->
+        <input type="hidden" name="sort_by" value="{{ form.sort_by.data or 'featured' }}">
+
+        <div class="filter-actions">
+          <button type="submit" class="btn btn-primary btn-block">Apply Filters</button>
+          <a href="{{ url_for('catalogue') }}" class="btn btn-outline btn-block btn-sm">Clear Filters</a>
+        </div>
+      </form>
+    </aside>
+
+    <!-- Right Column: Sort Toolbar & Product Grid -->
+    <div class="catalogue-main">
+      <!-- Toolbar -->
+      <div class="catalogue-toolbar">
+        <div class="result-summary">
+          <strong>{{ result_count }}</strong>
+          <span>{{ 'product' if result_count == 1 else 'products' }} found</span>
+          {% if form.q.data %}
+            <span class="query-badge">for &ldquo;{{ form.q.data }}&rdquo;</span>
+          {% endif %}
+        </div>
+
+        <form action="{{ url_for('catalogue') }}" method="get" class="sort-form">
+          <!-- Preserve active filters when changing sort order -->
+          {% if form.q.data %}<input type="hidden" name="q" value="{{ form.q.data }}">{% endif %}
+          {% if form.category.data and form.category.data != 'all' %}
+            <input type="hidden" name="category" value="{{ form.category.data }}">
+          {% endif %}
+          {% if form.brand.data and form.brand.data != 'all' %}
+            <input type="hidden" name="brand" value="{{ form.brand.data }}">
+          {% endif %}
+          {% if form.product_type.data and form.product_type.data != 'all' %}
+            <input type="hidden" name="product_type" value="{{ form.product_type.data }}">
+          {% endif %}
+          {% if form.min_price.data is not none %}
+            <input type="hidden" name="min_price" value="{{ form.min_price.data }}">
+          {% endif %}
+          {% if form.max_price.data is not none %}
+            <input type="hidden" name="max_price" value="{{ form.max_price.data }}">
+          {% endif %}
+          {% if form.availability.data and form.availability.data != 'all' %}
+            <input type="hidden" name="availability" value="{{ form.availability.data }}">
+          {% endif %}
+
+          <label for="sort_by">Sort by:</label>
+          <select id="sort_by" name="sort_by" data-auto-submit="true">
+            {% for val, label in form.sort_by.choices %}
+              <option value="{{ val }}" {% if (form.sort_by.data or 'featured') == val %}selected{% endif %}>
+                {{ label }}
+              </option>
+            {% endfor %}
+          </select>
+          <noscript>
+            <button type="submit" class="btn btn-outline btn-sm">Sort</button>
+          </noscript>
+        </form>
+      </div>
+
+      <!-- Product Grid -->
+      {% if products %}
+        <div class="product-grid">
+          {% for product in products %}
+            <article class="product-card">
+              <div class="product-card-media">
+                <a href="{{ url_for('product_detail', product_id=product.id) }}">
+                  <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy">
+                </a>
+                <span class="stock-badge {{ product.stock_badge_class }}">{{ product.stock_status }}</span>
+                {% if product.is_bestseller %}
+                  <span class="tag-badge">Bestseller</span>
+                {% elif product.is_featured %}
+                  <span class="tag-badge tag-featured">Featured</span>
+                {% endif %}
+              </div>
+
+              <div class="product-card-body">
+                <div class="product-meta-row">
+                  <span class="product-brand">{{ product.brand }}</span>
+                  <span class="product-cat">{{ product.category_name }}</span>
+                </div>
+
+                <h3 class="product-title">
+                  <a href="{{ url_for('product_detail', product_id=product.id) }}">{{ product.name }}</a>
+                </h3>
+
+                <p class="product-excerpt">{{ product.description }}</p>
+
+                <!-- Top 2 Technical Highlights -->
+                {% if product.specifications %}
+                  <ul class="mini-spec-list">
+                    {% for spec_k, spec_v in product.specifications.items() %}
+                      {% if loop.index <= 2 %}
+                        <li><strong>{{ spec_k }}:</strong> {{ spec_v }}</li>
+                      {% endif %}
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+
+                <div class="product-price-row">
+                  <strong class="product-price">{{ product.formatted_price }}</strong>
+                  <small class="product-sku">
+                    {% if product.stock > 0 %}
+                      {{ product.stock }} in stock • {{ product.sku }}
+                    {% else %}
+                      SKU: {{ product.sku }}
+                    {% endif %}
+                  </small>
+                </div>
+
+                <!-- Quick Compare Checkbox -->
+                <label class="compare-check-label">
+                  <input
+                    type="checkbox"
+                    class="compare-select-checkbox"
+                    value="{{ product.id }}"
+                    data-product-name="{{ product.name }}"
+                  >
+                  <span>Select to compare specs</span>
+                </label>
+
+                <div class="product-card-actions">
+                  {% if product.is_available %}
+                    <form action="{{ url_for('cart_add') }}" method="post" class="inline-form grow-form">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="product_id" value="{{ product.id }}">
+                      <input type="hidden" name="quantity" value="1">
+                      <input type="hidden" name="next" value="{{ request.full_path }}">
+                      <button type="submit" class="btn btn-primary btn-sm btn-block">Add to Cart</button>
+                    </form>
+                  {% else %}
+                    <button type="button" class="btn btn-disabled btn-sm grow-form" disabled>
+                      Out of Stock
+                    </button>
+                  {% endif %}
+
+                  <form action="{{ url_for('wishlist_toggle', product_id=product.id) }}" method="post" class="inline-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="next" value="{{ request.full_path }}">
+                    {% set saved = product.id in wishlist_ids %}
+                    <button
+                      type="submit"
+                      class="btn btn-outline btn-sm {% if saved %}btn-saved{% endif %}"
+                      title="{{ 'Remove from Wishlist' if saved else 'Save to Wishlist' }}"
+                    >
+                      {{ 'Saved' if saved else 'Save' }}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <!-- Empty Search State -->
+        <div class="empty-state">
+          <h3>No products matched your current filters</h3>
+          <p>
+            Try widening your Naira price range, clearing the keyword search, or browsing all categories.
+          </p>
+          <a href="{{ url_for('catalogue') }}" class="btn btn-primary">Reset Catalogue Filters</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
